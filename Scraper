@@ -1,0 +1,37 @@
+import scrapy
+from scrapy.crawler import CrawlerProcess
+
+
+class DnaInfoSpider(scrapy.Spider):
+    name = "DnaInfoSpider"
+    start_urls = ["https://www.dnainfo.com/chicago/"]
+
+    def parse(self, response):
+        police_stories = {}
+
+        # the article links have class="headline"
+        # I am bringing back the link and the headline text
+        for headline in response.css('a.headline'):
+            href = headline.css('a::attr(href)')
+            text = headline.css('::text')
+
+            if text:
+                # this makes the headline text readable
+                text = "\n".join(text.extract()).strip()
+
+                # limits to only articles that reference the police
+                text_lower = text.lower()
+                if "police" in text_lower or "cpd" in text_lower:
+
+                    # extra step is to have each link only output once;
+                    # most are on the page twice
+                    url = href.extract()[0]
+                    if url not in police_stories:
+                        police_stories[url] = 1
+                        yield {'href': url, 'text': text}
+
+
+def main():
+    crawlerProcess = CrawlerProcess()
+    crawlerProcess.crawl(DnaInfoSpider)
+    crawlerProcess.start()
